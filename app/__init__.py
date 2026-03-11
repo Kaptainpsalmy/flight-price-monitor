@@ -1,6 +1,3 @@
-"""
-Price Monitor Microservice - Complete API Endpoints
-"""
 from flask import Flask, jsonify, request, url_for
 from .config import get_config
 from .database import db, init_db
@@ -16,18 +13,15 @@ import json
 def create_app():
     app = Flask(__name__)
 
-    # Load configuration based on environment
+    # i loaded configuration
     app.config.from_object(get_config())
 
-    # Initialize database
     init_db(app)
 
-    # Store app reference for scheduler
     app.scheduler_manager = scheduler_manager
 
     @app.errorhandler(400)
     def bad_request(error):
-        """Handle bad requests"""
         return jsonify({
             'success': False,
             'message': 'Bad request',
@@ -36,7 +30,6 @@ def create_app():
 
     @app.errorhandler(404)
     def not_found(error):
-        """Handle not found errors"""
         return jsonify({
             'success': False,
             'message': 'Resource not found'
@@ -44,7 +37,6 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(error):
-        """Handle internal server errors"""
         db.session.rollback()
         return jsonify({
             'success': False,
@@ -52,13 +44,12 @@ def create_app():
             'error': str(error) if app.debug else 'An unexpected error occurred'
         }), 500
 
-    # Add JSON decode error handler
+    # JSON decode error handler
     @app.before_request
     def handle_json_errors():
         """Catch JSON decode errors before they crash"""
         if request.is_json:
             try:
-                # This will trigger JSON parsing
                 _ = request.get_json()
             except Exception as e:
                 return jsonify({
@@ -69,12 +60,9 @@ def create_app():
 
     @app.route('/health')
     def health():
-        """Health check endpoint"""
         try:
-            # Test database connection
             db.engine.connect()
 
-            # Get scheduler status
             scheduler_status = get_scheduler_status()
 
             # Get counts for monitoring
@@ -107,7 +95,6 @@ def create_app():
 
     @app.route('/')
     def index():
-        """Root endpoint with API documentation"""
         return jsonify({
             'name': 'Price Monitor Microservice',
             'version': '1.0.0',
@@ -123,17 +110,16 @@ def create_app():
                 'alert_threshold_percent': app.config.get('ALERT_THRESHOLD_PERCENT', 10)
             },
             'endpoints': {
-                # System endpoints
                 'GET /health': 'Health check with system stats',
                 'GET /': 'This documentation',
 
-                # Scheduler endpoints
+                # Scheduler
                 'GET /api/scheduler/status': 'Get scheduler status',
                 'POST /api/scheduler/start': 'Start the scheduler',
                 'POST /api/scheduler/stop': 'Stop the scheduler',
                 'POST /api/scheduler/trigger': 'Manually trigger a price check',
 
-                # Flight endpoints
+                # Flight
                 'GET /api/flights': 'List all flights (with filters)',
                 'POST /api/flights': 'Add a new flight to monitor',
                 'GET /api/flights/<id>': 'Get flight details',
@@ -143,362 +129,31 @@ def create_app():
                 'POST /api/flights/<id>/force-drop': 'Force price drop (testing)',
                 'GET /api/flights/<id>/history': 'Get price history',
 
-                # Alert endpoints
+                # Alert
                 'GET /api/alerts': 'List all alerts',
                 'GET /api/alerts/<id>': 'Get alert details',
                 'GET /api/flights/<id>/alerts': 'Get alerts for a flight',
 
-                # Stats endpoints
+                # Stats
                 'GET /api/stats/summary': 'Get summary statistics',
                 'GET /api/stats/trends': 'Get price trend analysis',
 
-                # Documentation
-                'GET /api/docs/postman': 'Download Postman collection',
-                'GET /api/docs/openapi.json': 'OpenAPI/Swagger specification'
+
             }
         })
 
-    # ========== DOCUMENTATION ENDPOINTS ==========
-
-    @app.route('/api/docs/postman', methods=['GET'])
-    def postman_collection():
-        """Generate Postman collection JSON"""
-        collection = {
-            "info": {
-                "name": "Price Monitor API",
-                "description": "API for monitoring flight prices and alerts",
-                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-            },
-            "item": [
-                {
-                    "name": "Health",
-                    "item": [
-                        {
-                            "name": "Check Health",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/health"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "name": "Scheduler",
-                    "item": [
-                        {
-                            "name": "Get Status",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/scheduler/status"
-                            }
-                        },
-                        {
-                            "name": "Start Scheduler",
-                            "request": {
-                                "method": "POST",
-                                "url": "{{base_url}}/api/scheduler/start"
-                            }
-                        },
-                        {
-                            "name": "Stop Scheduler",
-                            "request": {
-                                "method": "POST",
-                                "url": "{{base_url}}/api/scheduler/stop"
-                            }
-                        },
-                        {
-                            "name": "Trigger Check",
-                            "request": {
-                                "method": "POST",
-                                "url": "{{base_url}}/api/scheduler/trigger"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "name": "Flights",
-                    "item": [
-                        {
-                            "name": "Get All Flights",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/flights"
-                            }
-                        },
-                        {
-                            "name": "Create Flight",
-                            "request": {
-                                "method": "POST",
-                                "url": "{{base_url}}/api/flights",
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": json.dumps({
-                                        "flight_number": "UA123",
-                                        "airline": "United Airlines",
-                                        "origin": "JFK",
-                                        "destination": "LAX",
-                                        "departure_date": "2026-04-15T10:30:00",
-                                        "original_price": 450.00,
-                                        "currency": "USD"
-                                    }, indent=2),
-                                    "options": {
-                                        "raw": {
-                                            "language": "json"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "name": "Get Flight",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/flights/1"
-                            }
-                        },
-                        {
-                            "name": "Update Flight",
-                            "request": {
-                                "method": "PUT",
-                                "url": "{{base_url}}/api/flights/1",
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": json.dumps({
-                                        "is_active": False
-                                    }, indent=2)
-                                }
-                            }
-                        },
-                        {
-                            "name": "Delete Flight",
-                            "request": {
-                                "method": "DELETE",
-                                "url": "{{base_url}}/api/flights/1"
-                            }
-                        },
-                        {
-                            "name": "Check Flight",
-                            "request": {
-                                "method": "POST",
-                                "url": "{{base_url}}/api/flights/1/check"
-                            }
-                        },
-                        {
-                            "name": "Force Price Drop",
-                            "request": {
-                                "method": "POST",
-                                "url": "{{base_url}}/api/flights/1/force-drop",
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": json.dumps({
-                                        "drop_percentage": 15
-                                    }, indent=2)
-                                }
-                            }
-                        },
-                        {
-                            "name": "Get Price History",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/flights/1/history"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "name": "Alerts",
-                    "item": [
-                        {
-                            "name": "Get All Alerts",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/alerts"
-                            }
-                        },
-                        {
-                            "name": "Get Alert",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/alerts/1"
-                            }
-                        },
-                        {
-                            "name": "Get Flight Alerts",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/flights/1/alerts"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "name": "Statistics",
-                    "item": [
-                        {
-                            "name": "Get Summary",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/stats/summary"
-                            }
-                        },
-                        {
-                            "name": "Get Trends",
-                            "request": {
-                                "method": "GET",
-                                "url": "{{base_url}}/api/stats/trends?days=30"
-                            }
-                        }
-                    ]
-                }
-            ],
-            "variable": [
-                {
-                    "key": "base_url",
-                    "value": "http://localhost:5001",
-                    "type": "string"
-                }
-            ]
-        }
-        return jsonify(collection)
-
-    @app.route('/api/docs/openapi.json', methods=['GET'])
-    def openapi_spec():
-        """Generate OpenAPI/Swagger specification"""
-        spec = {
-            "openapi": "3.0.0",
-            "info": {
-                "title": "Price Monitor API",
-                "description": "API for monitoring flight prices and triggering alerts",
-                "version": "1.0.0",
-                "contact": {
-                    "name": "API Support",
-                    "email": "support@example.com"
-                }
-            },
-            "servers": [
-                {
-                    "url": "http://localhost:5001",
-                    "description": "Local development server"
-                }
-            ],
-            "tags": [
-                {"name": "Health", "description": "System health checks"},
-                {"name": "Scheduler", "description": "Scheduler management"},
-                {"name": "Flights", "description": "Flight management"},
-                {"name": "Alerts", "description": "Alert management"},
-                {"name": "Statistics", "description": "Analytics and statistics"}
-            ],
-            "paths": {
-                "/health": {
-                    "get": {
-                        "tags": ["Health"],
-                        "summary": "Check system health",
-                        "responses": {
-                            "200": {
-                                "description": "System is healthy",
-                                "content": {
-                                    "application/json": {
-                                        "example": {
-                                            "status": "healthy",
-                                            "database": "connected",
-                                            "active_flights": 5
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "/api/flights": {
-                    "get": {
-                        "tags": ["Flights"],
-                        "summary": "List all flights",
-                        "parameters": [
-                            {
-                                "name": "active_only",
-                                "in": "query",
-                                "schema": {"type": "boolean"},
-                                "description": "Filter by active flights"
-                            },
-                            {
-                                "name": "flight_number",
-                                "in": "query",
-                                "schema": {"type": "string"},
-                                "description": "Filter by flight number"
-                            },
-                            {
-                                "name": "page",
-                                "in": "query",
-                                "schema": {"type": "integer", "minimum": 1},
-                                "description": "Page number"
-                            },
-                            {
-                                "name": "per_page",
-                                "in": "query",
-                                "schema": {"type": "integer", "minimum": 1, "maximum": 100},
-                                "description": "Items per page"
-                            }
-                        ],
-                        "responses": {
-                            "200": {
-                                "description": "List of flights",
-                                "content": {
-                                    "application/json": {
-                                        "example": {
-                                            "success": True,
-                                            "count": 2,
-                                            "flights": []
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "post": {
-                        "tags": ["Flights"],
-                        "summary": "Add a new flight",
-                        "requestBody": {
-                            "required": True,
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "required": ["flight_number", "airline", "origin", "destination", "departure_date", "original_price"],
-                                        "properties": {
-                                            "flight_number": {"type": "string", "example": "UA123"},
-                                            "airline": {"type": "string", "example": "United Airlines"},
-                                            "origin": {"type": "string", "example": "JFK"},
-                                            "destination": {"type": "string", "example": "LAX"},
-                                            "departure_date": {"type": "string", "format": "date-time", "example": "2026-04-15T10:30:00"},
-                                            "original_price": {"type": "number", "example": 450.00},
-                                            "currency": {"type": "string", "example": "USD"}
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "responses": {
-                            "201": {"description": "Flight created"},
-                            "400": {"description": "Validation error"}
-                        }
-                    }
-                }
-            }
-        }
-        return jsonify(spec)
 
     # ========== SCHEDULER API ENDPOINTS ==========
 
     @app.route('/api/scheduler/status', methods=['GET'])
     def scheduler_status():
-        """Get scheduler status"""
+        """scheduler status"""
         return jsonify(get_scheduler_status())
 
     @app.route('/api/scheduler/start', methods=['POST'])
     def scheduler_start():
         """Start the scheduler"""
         try:
-            # Check if already running
             status = get_scheduler_status()
             if status.get('running'):
                 return jsonify({
@@ -557,7 +212,7 @@ def create_app():
 
     @app.route('/api/scheduler/trigger', methods=['POST'])
     def scheduler_trigger():
-        """Manually trigger a price check"""
+
         try:
             success, message, results = trigger_manual_check()
 
@@ -583,7 +238,6 @@ def create_app():
 
     @app.route('/api/flights', methods=['GET'])
     def get_flights():
-        """Get all flights with optional filters and pagination"""
         try:
             # Validate pagination parameters
             pagination_errors = validate_pagination(request.args)
@@ -593,7 +247,7 @@ def create_app():
                     'errors': pagination_errors
                 }), 400
 
-            # Get query parameters
+            # query parameters
             active_only = request.args.get('active_only', 'false').lower() == 'true'
             flight_number = request.args.get('flight_number')
             origin = request.args.get('origin')
@@ -607,7 +261,6 @@ def create_app():
             page = int(request.args.get('page', 1))
             per_page = int(request.args.get('per_page', 20))
 
-            # Build query
             query = Flight.query
 
             if active_only:
@@ -631,16 +284,12 @@ def create_app():
             if max_price:
                 query = query.filter(Flight.current_price <= float(max_price))
 
-            # Note: min_drop requires calculation, handle in Python after query
-
-            # Get paginated results
             paginated = query.order_by(Flight.departure_date).paginate(
                 page=page, per_page=per_page, error_out=False
             )
 
             flights = paginated.items
 
-            # Filter by min_drop if specified (in Python)
             if min_drop:
                 min_drop = float(min_drop)
                 flights = [f for f in flights if f.price_drop_percentage >= min_drop]
@@ -914,7 +563,7 @@ def create_app():
 
     @app.route('/api/flights/<int:flight_id>/force-drop', methods=['POST'])
     def force_flight_drop(flight_id):
-        """Force a price drop for testing (bypasses mock generator)"""
+        """Force a price drop for testing """
         try:
             data = request.get_json() or {}
             drop_percentage = data.get('drop_percentage', 10)
@@ -947,7 +596,7 @@ def create_app():
 
     @app.route('/api/flights/<int:flight_id>/history', methods=['GET'])
     def get_flight_history(flight_id):
-        """Get price history for a flight"""
+        """price history for a flight"""
         try:
             flight = Flight.query.get(flight_id)
 
@@ -957,7 +606,7 @@ def create_app():
                     'message': f'Flight {flight_id} not found'
                 }), 404
 
-            # Get history with pagination
+            # history with pagination
             page = int(request.args.get('page', 1))
             per_page = int(request.args.get('per_page', 30))
 
@@ -987,7 +636,6 @@ def create_app():
                 'message': f'Error: {str(e)}'
             }), 500
 
-    # ========== ALERT API ENDPOINTS ==========
 
     @app.route('/api/alerts', methods=['GET'])
     def get_alerts():
@@ -1129,7 +777,7 @@ def create_app():
 
     @app.route('/api/stats/summary', methods=['GET'])
     def get_stats_summary():
-        """Get summary statistics"""
+        """summary statistics"""
         try:
             # Basic counts
             total_flights = Flight.query.count()
@@ -1191,7 +839,7 @@ def create_app():
 
     @app.route('/api/stats/trends', methods=['GET'])
     def get_price_trends():
-        """Get price trend analysis"""
+        """price trend analysis"""
         try:
             days = int(request.args.get('days', 30))
 
@@ -1203,12 +851,11 @@ def create_app():
 
             cutoff = datetime.utcnow() - timedelta(days=days)
 
-            # Get alerts in date range
+            # alerts in date range
             alerts = PriceAlert.query.filter(
                 PriceAlert.triggered_at >= cutoff
             ).order_by(PriceAlert.triggered_at).all()
 
-            # Group by date
             from collections import defaultdict
             daily_counts = defaultdict(int)
             daily_drops = defaultdict(list)

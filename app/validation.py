@@ -1,13 +1,9 @@
-"""
-Request validation for API endpoints
-"""
 from flask import request
 from datetime import datetime
 import re
 
 
 def validate_flight_data(data):
-    """Validate flight creation/update data"""
     errors = []
 
     # Flight number (required)
@@ -18,13 +14,11 @@ def validate_flight_data(data):
     elif len(data['flight_number']) > 20:
         errors.append("flight_number must be less than 20 characters")
 
-    # Airline (required)
     if not data.get('airline'):
         errors.append("airline is required")
     elif not isinstance(data['airline'], str):
         errors.append("airline must be a string")
 
-    # Origin (required)
     if not data.get('origin'):
         errors.append("origin is required")
     elif not isinstance(data['origin'], str):
@@ -57,7 +51,7 @@ def validate_flight_data(data):
         except (ValueError, TypeError):
             errors.append("departure_date must be a valid ISO format date (e.g., 2026-04-15T10:30:00)")
 
-    # Original price (required)
+    # Original price
     if data.get('original_price') is None:
         errors.append("original_price is required")
     else:
@@ -68,7 +62,7 @@ def validate_flight_data(data):
         except (ValueError, TypeError):
             errors.append("original_price must be a number")
 
-    # Currency (optional)
+    # Currency
     if data.get('currency'):
         if not isinstance(data['currency'], str):
             errors.append("currency must be a string")
@@ -104,7 +98,6 @@ def validate_pagination(args):
 
 
 def validate_date_range(args):
-    """Validate date range parameters"""
     errors = []
 
     # Start date

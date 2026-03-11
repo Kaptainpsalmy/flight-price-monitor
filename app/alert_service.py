@@ -8,7 +8,7 @@ import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Setup logger
+
 logger = setup_logger('alert_service')
 
 class AlertService:
@@ -31,57 +31,48 @@ class AlertService:
             self.logger.warning("Email notifications disabled - missing configuration")
 
     def calculate_drop_percentage(self, original_price, current_price):
-        """Calculate the percentage drop"""
         if original_price == 0:
             return 0
         drop = ((original_price - current_price) / original_price) * 100
         return round(drop, 2)
 
     def should_trigger_alert(self, flight, current_price):
-        """
-        Idempotency check: Determine if an alert should be triggered
-        """
         try:
             # Calculate current drop percentage
             drop_percentage = self.calculate_drop_percentage(flight.original_price, current_price)
 
-            # Check 1: Is drop >= 10%?
+            # Is drop >= 10%?
             if drop_percentage < 10:
                 return False, f"Drop {drop_percentage}% is below 10% threshold"
 
-            # Check 2: Has flight already departed?
+            # Has flight already departed?
             if flight.days_until_departure < 0:
                 return False, "Flight has already departed"
 
-            # Check 3: Is flight still active?
+            # Is flight still active?
             if not flight.is_active:
                 return False, "Flight is inactive"
 
-            # Check 4: IDEMPOTENCY CHECK - Have we already alerted for this price or better?
-            # Get the most recent alert for this flight
+            # IDEMPOTENCY CHECK
             last_alert = PriceAlert.query.filter_by(
                 flight_id=flight.id
             ).order_by(PriceAlert.triggered_at.desc()).first()
 
             if last_alert:
-                # If we've already alerted for a price LOWER than or EQUAL to current price,
-                # don't alert again (user already knows about a better deal)
                 if current_price >= last_alert.alert_price:
                     return False, f"Already alerted at ${last_alert.alert_price} (current: ${current_price})"
 
-                # Also check if we've alerted for a similar drop percentage recently
-                # This prevents alert spam if price fluctuates around the same point
+                # check if there is an alert recently the type
                 time_since_last_alert = (datetime.now(timezone.utc) - last_alert.triggered_at.replace(tzinfo=timezone.utc)).total_seconds()
                 if time_since_last_alert < 3600:  # 1 hour cooldown
                     drop_difference = abs(drop_percentage - last_alert.drop_percentage)
                     if drop_difference < 2:  # Within 2% of last alert
                         return False, f"Similar drop ({drop_difference:.1f}% diff) within cooldown period"
 
-            # Check 5: Look at all alerts to ensure we're not alerting for the same threshold
-            # This is the core idempotency: we should only alert when price drops to a NEW low
+            # check all alerts if we have not alert for the same price only alerts if the price drops to new
             all_alerts = PriceAlert.query.filter_by(flight_id=flight.id).all()
             if all_alerts:
-                # Find the lowest price we've ever alerted for
+                # check for lowest price we have entered for
                 lowest_alerted_price = min(alert.alert_price for alert in all_alerts)
                 if current_price >= lowest_alerted_price:
                     return False, f"Already alerted for lower price: ${lowest_alerted_price}"
@@ -95,10 +86,7 @@ class AlertService:
             return False, f"Error checking alert: {str(e)}"
 
     def trigger_alert(self, flight, current_price, drop_percentage):
-        """
-        Actually trigger the alert and record it in database
-        Then send notifications (console + email)
-        """
+
         try:
             self.logger.info(f"🔔 TRIGGERING ALERT for {flight.flight_number}")
 
@@ -116,10 +104,8 @@ class AlertService:
             db.session.add(alert)
             db.session.commit()
 
-            # Send console notification
             self.send_console_alert(flight, current_price, drop_percentage)
 
-            # Send email notification if enabled
             if self.email_enabled:
                 self.send_email_alert(flight, current_price, drop_percentage)
 
@@ -134,7 +120,6 @@ class AlertService:
             return None
 
     def send_console_alert(self, flight, current_price, drop_percentage):
-        """Send alert to console"""
         alert_message = self.format_alert_message(flight, current_price, drop_percentage)
 
         print("\n" + "="*60)
@@ -144,24 +129,20 @@ class AlertService:
         print("="*60 + "\n")
 
     def send_email_alert(self, flight, current_price, drop_percentage):
-        """Send alert via email"""
         try:
-            # Create email content
             subject = f"✈️ Flight Price Drop Alert: {flight.flight_number}"
 
-            # Create HTML email body
+            # HTML email body
             html_body = self.format_email_html(flight, current_price, drop_percentage)
 
-            # Create plain text body as fallback
             text_body = self.format_email_text(flight, current_price, drop_percentage)
 
-            # Create message
+            #  message
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
             msg['From'] = self.from_email
             msg['To'] = self.to_email
 
-            # Attach parts
             msg.attach(MIMEText(text_body, 'plain'))
             msg.attach(MIMEText(html_body, 'html'))
 
@@ -178,7 +159,6 @@ class AlertService:
             self.logger.error(traceback.format_exc())
 
     def format_email_text(self, flight, current_price, drop_percentage):
-        """Format plain text email body"""
         return f"""
 FLIGHT PRICE DROP ALERT ✈️
 
@@ -202,7 +182,6 @@ Price Monitor Service
 """
 
     def format_email_html(self, flight, current_price, drop_percentage):
-        """Format HTML email body"""
         return f"""
 <!DOCTYPE html>
 <html>
@@ -309,10 +288,6 @@ Price Monitor Service
         """
 
     def check_and_trigger(self, flight, current_price):
-        """
-        Main public method: Check if alert needed and trigger if yes
-        Returns: (alert_triggered: bool, alert_record: PriceAlert or None, reason: str)
-        """
         try:
             self.logger.debug(f"Checking alert for flight {flight.flight_number} at ${current_price}")
 
@@ -340,6 +315,5 @@ alert_service = AlertService()
 
 # Convenience function for the price checker to call
 def check_and_trigger_alerts(flight, current_price):
-    """Wrapper function for price_checker to call"""
     triggered, alert, reason = alert_service.check_and_trigger(flight, current_price)
     return triggered

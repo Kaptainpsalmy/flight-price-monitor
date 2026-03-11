@@ -1,13 +1,8 @@
-"""
-Logging configuration for the Price Monitor service
-"""
 import logging
 import sys
 from datetime import datetime
 
 def setup_logger(name):
-    """Setup logger with console and file handlers"""
-
     # Create logger
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

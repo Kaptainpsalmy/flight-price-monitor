@@ -1,6 +1,3 @@
-"""
-Core price checking logic with mock price generation
-"""
 from .database import db
 from .models import Flight, PriceHistory
 from .alert_service import check_and_trigger_alerts
@@ -9,13 +6,10 @@ from datetime import datetime, timezone
 import random
 import traceback
 
-# Setup logger
 logger = setup_logger('price_checker')
 
 
 class MockPriceGenerator:
-    """Generates mock prices to simulate real airline API responses"""
-
     # Common price fluctuation patterns
     PATTERNS = {
         'normal': lambda p, f: p * f,  # Random fluctuation
@@ -45,7 +39,6 @@ class MockPriceGenerator:
             pattern = self.get_pattern()
             logger.debug(f"Using {pattern} pattern for flight {self.flight.flight_number}")
 
-            # Base fluctuation
             if pattern == 'last_minute':
                 # High volatility for last minute
                 fluctuation = random.uniform(0.5, 1.3)
@@ -59,7 +52,7 @@ class MockPriceGenerator:
                 # Normal random fluctuation
                 fluctuation = random.uniform(0.8, 1.2)
 
-            # Apply pattern-specific logic
+            #pattern-specific logic
             pattern_func = self.PATTERNS.get(pattern, self.PATTERNS['normal'])
             mock_price = pattern_func(self.flight.original_price, fluctuation)
 
@@ -77,8 +70,6 @@ class MockPriceGenerator:
 
 
 class PriceChecker:
-    """Main price checking service"""
-
     def __init__(self):
         self.logger = logger
 
