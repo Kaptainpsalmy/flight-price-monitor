@@ -1,58 +1,54 @@
-# Python
-__pycache__/
+# Python cache
+
+**pycache**/
 *.py[cod]
 *$py.class
-*.so
-.Python
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-coverage_report/
 
-# Virtual Environment
+# Virtual environments
+
+.venv/
 venv/
 env/
 ENV/
-.venv/
-*.venv
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Environment variables
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-instance/
-*.db-journal
-
-# Environment Variables
 .env
-.env.local
-.env.*.local
+.env.*
 
 # Logs
+
 logs/
 *.log
-*.pid
 
-# Testing
-.tox/
-.mypy_cache/
-.ruff_cache/
+# Database
+
+instance/
+*.db
+*.sqlite3
+
+# Test cache
+
+.pytest_cache/
+
+# Coverage reports
+
 .coverage
 htmlcov/
+coverage_report/
 
-# Distribution
-dist/
-build/
-*.egg-info/
+# IDE
 
-# OS
+.vscode/
+.idea/
+
+# OS files
+
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+
+build/
+dist/
+*.egg-info/
